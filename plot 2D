@@ -1,0 +1,5 @@
+#show 2D
+ggplot(donnees, aes(x = X, y = Y, color = as.factor(kmeans_result$cluster))) +
+  geom_point(size = 3) +
+  theme_minimal() +
+  ggtitle("KMeans Clusters (k=2)")
