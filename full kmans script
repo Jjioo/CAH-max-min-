@@ -1,0 +1,64 @@
+# Install necessary libraries if not installed
+# install.packages("ggplot2")
+# install.packages("plotly")
+
+# 1) Read the data from the file (no header)
+donnees <- read.table("a1.txt", header = FALSE)
+
+# Manually assign column names for X and Y
+colnames(donnees) <- c("X", "Y")
+
+# Display the first few rows to check the data
+print(head(donnees))
+
+# 2) Compute the distance matrix using the X and Y columns
+distance_matrix <- dist(donnees[, c("X", "Y")])
+
+# Perform hierarchical clustering (CAH)
+cah_result <- hclust(distance_matrix, method = "ward.D2")
+
+# 3) Compute the jumps in merge heights
+heights <- cah_result$height
+height_diff <- diff(heights)  # Δ_i = h[i+1] - h[i]
+
+# 4) Find the index of the largest jump
+i_star <- which.max(height_diff)  # i* in 1:(n-2)
+
+# 5) Compute optimal k (number of clusters)
+n_obs <- nrow(donnees)  # n (total number of observations)
+k_optimal <- n_obs - i_star  # Optimal number of clusters
+
+cat("Largest jump is between merges", i_star, "and", i_star + 1, "\n")
+cat("→ Optimal number of clusters k =", k_optimal, "\n")
+
+# 6) Cut the tree into k_optimal clusters
+clusters_opt <- cutree(cah_result, k = k_optimal)
+donnees$cluster_cah_opt <- as.factor(clusters_opt)
+
+# 7) Perform KMeans with the optimal k from CAH
+kmeans_result <- kmeans(donnees[, c("X", "Y")], centers = k_optimal)
+
+# Assign KMeans cluster results to the data frame
+donnees$cluster_kmeans_opt <- as.factor(kmeans_result$cluster)
+
+# 8) Visualize KMeans clustering result in 3D with Plotly
+library(plotly)
+
+plot_ly(
+  donnees,
+  x = ~X,
+  y = ~Y,
+  z = ~cluster_kmeans_opt,  # You can use any column for the Z axis, just for separation
+  color = ~cluster_kmeans_opt,  # Color by the cluster assignment
+  colors = c("red", "blue"),  # Customize colors for the two clusters
+  type = "scatter3d",
+  mode = "markers"
+) %>%
+  layout(
+    title = "KMeans Clusters in 3D",
+    scene = list(
+      xaxis = list(title = 'X'),
+      yaxis = list(title = 'Y'),
+      zaxis = list(title = 'Cluster')
+    )
+  )
